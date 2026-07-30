@@ -23,8 +23,6 @@ import {
   AnimatedNumber,
   Collapse,
   PageTransition,
-  Stagger,
-  StaggerItem,
 } from "@/components/ui/motion";
 import {
   Alert,
@@ -305,7 +303,6 @@ export function ClauseWorkspace({ clauseId }: { clauseId: string }) {
             contractId={clause.contract_id}
             clauseId={clause.id}
             initialText={clause.text}
-            category={clause.category}
             baselineScore={clause.risk_score}
           />
 

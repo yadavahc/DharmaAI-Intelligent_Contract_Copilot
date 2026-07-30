@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "e2e:setup": "prisma db push --skip-generate && npm run build",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
@@ -54,6 +54,7 @@
     "zod": "3.24.1"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
     "@playwright/test": "^1.62.0",
     "@types/bcryptjs": "2.4.6",
     "@types/node": "22.10.5",

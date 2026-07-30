@@ -47,7 +47,7 @@ import type {
   NegotiationSide,
   NegotiationTurn,
 } from "@/lib/types";
-import { cn, formatPct, riskClasses, truncate } from "@/lib/utils";
+import { cn, formatPct, riskClasses } from "@/lib/utils";
 
 /**
  * Feature 1 — Live Agent Theater. Feature 3 — Strategy Coach side panel.

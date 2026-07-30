@@ -18,7 +18,6 @@ import { GuardrailVerdictCard } from "@/components/guardrail-verdict";
 import { PageTransition, Reveal } from "@/components/ui/motion";
 import {
   Alert,
-  Badge,
   Button,
   Card,
   CardTitle,

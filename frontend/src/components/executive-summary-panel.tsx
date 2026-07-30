@@ -14,7 +14,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { AnimatePresence, motion } from "@/components/ui/motion";
-import { Badge, Button, Card, CardTitle, Skeleton } from "@/components/ui/primitives";
+import { Badge, Button, Card, Skeleton } from "@/components/ui/primitives";
 import { ApiError, api } from "@/lib/api";
 import type { ExecutiveSummary } from "@/lib/types";
 import { cn, formatPct } from "@/lib/utils";
@@ -178,7 +178,8 @@ export function ExecutiveSummaryPanel({
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            summary ? setOpen(true) : generate(false);
+            if (summary) setOpen(true);
+            else generate(false);
           }
         }}
         data-testid="exec-summary-trigger"

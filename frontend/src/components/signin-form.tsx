@@ -66,7 +66,7 @@ export function SignInForm({ demoAccounts }: { demoAccounts: DemoAccount[] }) {
     router.refresh();
   };
 
-  const useAccount = async (account: DemoAccount) => {
+  const signInAs = async (account: DemoAccount) => {
     setEmail(account.email);
     setPassword(account.password);
     setLoading(true);
@@ -168,7 +168,7 @@ export function SignInForm({ demoAccounts }: { demoAccounts: DemoAccount[] }) {
                 <li key={account.email}>
                   <button
                     type="button"
-                    onClick={() => useAccount(account)}
+                    onClick={() => signInAs(account)}
                     disabled={loading}
                     className={cn(
                       "group w-full rounded-lg border border-silver-50/[0.07] bg-base-900/50 p-3.5 text-left",

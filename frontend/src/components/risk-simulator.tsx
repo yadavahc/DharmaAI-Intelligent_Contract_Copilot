@@ -17,7 +17,6 @@ import {
   Button,
   Card,
   CardTitle,
-  Skeleton,
   Spinner,
   Tooltip,
 } from "@/components/ui/primitives";
@@ -48,13 +47,11 @@ export function RiskSimulator({
   contractId,
   clauseId,
   initialText,
-  category,
   baselineScore,
 }: {
   contractId: string;
   clauseId: string;
   initialText: string;
-  category: string;
   baselineScore: number;
 }) {
   const [text, setText] = React.useState(initialText);
