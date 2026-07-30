@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
@@ -102,9 +103,85 @@ class Settings(BaseSettings):
         return url
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Secret loading
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Secrets that should never be read from a plain env var in production.
+_SECRET_FIELDS = ("OPENAI_API_KEY", "QDRANT_API_KEY", "DATABASE_URL")
+
+# Where orchestrators mount secret files by convention.
+_SECRET_MOUNTS = (Path("/run/secrets"), Path("/var/run/secrets"))
+
+
+def _load_file_secrets() -> List[str]:
+    """Support the `*_FILE` convention used by Docker and Kubernetes secrets.
+
+    `.env` is fine for local development, but in production a secret in an
+    environment variable is visible to `docker inspect`, to every child process,
+    and to any crash reporter that dumps the environment. Both Docker Swarm and
+    Kubernetes instead mount secrets as files and expect the app to read them.
+
+    Precedence, lowest to highest:
+        .env file  →  environment variable  →  OPENAI_API_KEY_FILE  →  /run/secrets/<name>
+
+    Returns the names of secrets that were loaded from a file, so startup can
+    report which mechanism supplied each one.
+    """
+    loaded: List[str] = []
+
+    for name in _SECRET_FIELDS:
+        # 1. Explicit <NAME>_FILE pointer.
+        pointer = os.environ.get(f"{name}_FILE")
+        candidates = [Path(pointer)] if pointer else []
+
+        # 2. Conventional mount paths, checked lowercase and uppercase.
+        for mount in _SECRET_MOUNTS:
+            candidates.extend([mount / name.lower(), mount / name])
+
+        for path in candidates:
+            try:
+                if path.is_file():
+                    value = path.read_text(encoding="utf-8").strip()
+                    if value:
+                        os.environ[name] = value
+                        loaded.append(f"{name}←{path}")
+                        break
+            except OSError as exc:
+                logger.warning("Could not read secret file %s: %s", path, exc)
+
+    return loaded
+
+
+def _audit_secrets(settings: "Settings", file_loaded: List[str]) -> None:
+    """Warn about placeholder or missing secrets at startup, not at first use."""
+    if file_loaded:
+        logger.info("Secrets loaded from mounted files: %s", ", ".join(file_loaded))
+
+    key = (settings.openai_api_key or "").strip()
+    if not key:
+        logger.warning(
+            "No OPENAI_API_KEY set — running in demo mode with deterministic agent "
+            "output. Set a real key (or mount OPENAI_API_KEY_FILE) for live agents."
+        )
+    elif key.startswith("sk-replace"):
+        logger.warning(
+            "OPENAI_API_KEY is still the placeholder from .env.example — demo mode "
+            "will be used. Replace it with a real key for live agents."
+        )
+
+    if "dharma:dharma@" in settings.database_url:
+        logger.warning(
+            "Using the default Postgres credentials from .env.example. Fine for a "
+            "local demo; change them before exposing this beyond localhost."
+        )
+
+
 @lru_cache
 def get_settings() -> Settings:
+    file_loaded = _load_file_secrets()
     settings = Settings()
+
     try:
         settings.storage_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -116,6 +193,8 @@ def get_settings() -> Settings:
             settings.storage_dir,
             exc,
         )
+
+    _audit_secrets(settings, file_loaded)
     return settings
 
 

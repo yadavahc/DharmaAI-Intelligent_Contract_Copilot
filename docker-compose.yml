@@ -76,6 +76,12 @@ services:
       RISK_HIGH_THRESHOLD: ${RISK_HIGH_THRESHOLD:-70}
       RISK_MEDIUM_THRESHOLD: ${RISK_MEDIUM_THRESHOLD:-40}
       NEGOTIATION_MAX_ROUNDS: ${NEGOTIATION_MAX_ROUNDS:-4}
+      # Optional. Unset -> structured JSON logs; set -> Sentry (after scrubbing).
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+      # Prefer a mounted secret file over a plain env var in production;
+      # the backend reads OPENAI_API_KEY_FILE / /run/secrets/* if present.
+      OPENAI_API_KEY_FILE: ${OPENAI_API_KEY_FILE:-}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
