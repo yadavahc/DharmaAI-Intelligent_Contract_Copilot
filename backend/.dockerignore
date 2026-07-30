@@ -1,0 +1,25 @@
+# Secrets never belong in an image layer — they arrive as environment variables
+# at run time (see docker-compose.yml).
+.env
+.env.*
+
+# Host virtualenv: wrong platform and wrong Python version for the image.
+.venv
+venv
+
+# Caches and local artefacts
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+storage
+resources
+*.db
+
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.log
+.DS_Store

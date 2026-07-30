@@ -1,0 +1,41 @@
+# secrets
+.env
+.env.local
+*.pem
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/storage/
+backend/resources/
+
+# node
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# data
+*.log
+pgdata/
+qdrant_storage/

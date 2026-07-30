@@ -1,0 +1,20 @@
+# Normalise line endings so the repo stays consistent across Windows/macOS/Linux.
+* text=auto eol=lf
+
+# Shell scripts and Dockerfiles must keep LF or they break inside containers.
+*.sh    text eol=lf
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
+
+# Binary — never diff or normalise.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+
+# Generated: collapse in diffs and exclude from language stats.
+frontend/package-lock.json linguist-generated=true -diff

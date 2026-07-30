@@ -1,0 +1,30 @@
+# Keep secrets out of image layers. Next.js reads .env.local at build time, so
+# without this a developer's local secrets (NEXTAUTH_SECRET) would be baked into
+# the image AND would override the NEXT_PUBLIC_API_BASE_URL build arg.
+.env
+.env.local
+.env.*.local
+
+# Rebuilt inside the image; copying them is slow and can poison the cache.
+node_modules
+.next
+out
+
+# Test artefacts
+test-results
+playwright-report
+blob-report
+.playwright
+e2e
+
+# Local tooling
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode
+.idea
