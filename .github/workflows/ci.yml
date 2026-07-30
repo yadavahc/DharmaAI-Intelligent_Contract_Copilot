@@ -192,6 +192,11 @@ jobs:
 
       - name: Prepare database and build
         working-directory: frontend
+        env:
+          # Prisma manages only the `auth` schema. Sharing `public` with the
+          # backend made db push try to drop the dharma_* tables it had just
+          # created and seeded.
+          DATABASE_URL: postgresql://dharma:dharma@localhost:5432/dharma?schema=auth
         run: |
           npx prisma db push --skip-generate
           npm run build

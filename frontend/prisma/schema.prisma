@@ -1,16 +1,30 @@
-// Prisma owns the AUTH tables only.
+// Prisma owns the AUTH tables only - and owns them in their own Postgres schema.
 //
-// Schema ownership is split deliberately so that no table has two owners:
+// Ownership split:
 //
-//   * Prisma (this file)  → User / Account / Session / VerificationToken.
-//     NextAuth's Prisma adapter requires this exact shape.
-//   * SQLAlchemy (backend/app/db.py) → the domain tables (contracts, clauses,
+//   * Prisma (this file)  -> User / Account / Session / VerificationToken,
+//     in the `auth` schema. NextAuth's Prisma adapter requires this exact shape.
+//   * SQLAlchemy (backend/app/db.py) -> the domain tables (contracts, clauses,
 //     versions, negotiations, review queue, audit log, playbook rules), all
-//     prefixed `dharma_`.
+//     prefixed `dharma_`, in the `public` schema.
 //
-// Both point at the same Postgres database and never touch the same table, which
-// avoids the drift you get from mirroring one schema across two ORMs. Domain data
-// reaches the frontend through the FastAPI API, not through Prisma.
+// WHY A SEPARATE SCHEMA, and not just a naming convention:
+//
+//   `prisma db push` does not merely create the models it knows about - it
+//   reconciles the WHOLE schema it is pointed at against this file. Any table it
+//   does not recognise is treated as drift to be dropped:
+//
+//       "You are about to drop the `dharma_playbook_rules` table,
+//        which is not empty (14 rows)."
+//
+//   Sharing `public` therefore made `db push`, run after the backend had created
+//   its tables, a data-destroying operation - and the frontend container ran it on
+//   every boot. Scoping the datasource to `auth` confines Prisma to its own
+//   schema, so the two owners are separated physically rather than by convention.
+//
+// The frontend's DATABASE_URL must carry `?schema=auth`. The backend strips the
+// query string (see config.sqlalchemy_url), so the same base URL is safe for both.
+// Domain data reaches the frontend through the FastAPI API, never through Prisma.
 
 generator client {
   provider = "prisma-client-js"

@@ -253,15 +253,32 @@ Deliberately split so **no table has two owners**, which removes two-ORM drift:
 
 ```mermaid
 flowchart LR
-    P["Prisma<br/><i>frontend</i>"] -->|owns| A["User · Account<br/>Session · VerificationToken"]
-    S["SQLAlchemy<br/><i>backend</i>"] -->|owns| D["dharma_contracts · dharma_clauses<br/>dharma_clause_versions · dharma_negotiations<br/>dharma_negotiation_turns · dharma_review_tasks<br/>dharma_audit_events · dharma_playbook_rules"]
-    A --> PG[("Same Postgres database<br/>zero table overlap")]
+    P["Prisma<br/><i>frontend</i>"] -->|owns| A["<b>auth</b> schema<br/>User · Account<br/>Session · VerificationToken"]
+    S["SQLAlchemy<br/><i>backend</i>"] -->|owns| D["<b>public</b> schema<br/>dharma_contracts · dharma_clauses<br/>dharma_clause_versions · dharma_negotiations<br/>dharma_negotiation_turns · dharma_review_tasks<br/>dharma_audit_events · dharma_playbook_rules"]
+    A --> PG[("Same Postgres database<br/>separate schemas")]
     D --> PG
 ```
 
 NextAuth's Prisma adapter requires that exact auth-table shape, so Prisma owns it.
 Everything else is SQLAlchemy. Domain data reaches the frontend through the API, not
 through Prisma.
+
+> [!WARNING]
+> **The separation is physical, not a naming convention — and it has to be.**
+> `prisma db push` does not merely create the models it knows about; it reconciles
+> the *entire schema it is pointed at* and treats anything unrecognised as drift to
+> drop:
+>
+> ```
+> You are about to drop the `dharma_playbook_rules` table, which is not empty (14 rows).
+> ```
+>
+> Sharing `public` made a `db push` run after the backend had created its tables a
+> data-destroying operation — and the frontend container ran exactly that on every
+> boot. The frontend's `DATABASE_URL` therefore carries **`?schema=auth`**, confining
+> Prisma to its own schema. The backend strips the query string, so the same base URL
+> is safe for both. CI catches a regression here, because it starts the backend
+> *before* pushing the schema — which is the ordering that exposed it.
 
 ### Graceful degradation
 

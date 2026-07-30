@@ -53,4 +53,7 @@ ENV HOSTNAME=0.0.0.0
 
 # Push the auth schema on boot so a fresh Postgres volume works with no manual
 # migration step, then start the server. `db push` is idempotent.
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate --accept-data-loss || echo 'prisma db push failed; auth tables may be missing'; node server.js"]
+# `db push` is scoped to the `auth` schema (?schema=auth in DATABASE_URL), so it
+# only ever touches Prisma's own tables. Deliberately NO --accept-data-loss: if
+# push ever wants to drop something, that is a bug to surface, not to rubber-stamp.
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate || echo 'prisma db push failed; auth tables may be missing'; node server.js"]

@@ -105,7 +105,9 @@ services:
       backend:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-dharma}:${POSTGRES_PASSWORD:-dharma}@postgres:5432/${POSTGRES_DB:-dharma}
+      # ?schema=auth confines Prisma to its own tables. Without it, `db push`
+      # reconciles the whole public schema and drops the backend's dharma_* tables.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dharma}:${POSTGRES_PASSWORD:-dharma}@postgres:5432/${POSTGRES_DB:-dharma}?schema=auth
       # Server-side calls go container-to-container.
       API_INTERNAL_URL: http://backend:8000
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
