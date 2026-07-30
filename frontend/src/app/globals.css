@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens.
+ *
+ * Dharma AI is dark-first: the palette is tuned for a near-black base, and a
+ * light theme is provided for the (rare) reviewer who wants it. Tokens are HSL
+ * triplets so Tailwind's `/opacity` modifier works everywhere.
+ */
+@layer base {
+  :root {
+    /* ── base surfaces: near-black, slightly cool ── */
+    --base-950: 222 24% 4%;
+    --base-900: 222 20% 6.5%;
+    --base-850: 222 18% 8.5%;
+    --base-800: 222 16% 11%;
+    --base-700: 220 14% 17%;
+    --base-600: 220 12% 24%;
+
+    /* ── silver/slate text ramp ── */
+    --silver-50: 210 40% 98%;
+    --silver-100: 214 32% 93%;
+    --silver-200: 213 27% 84%;
+    --silver-300: 213 20% 71%;
+    --silver-400: 215 16% 57%;
+    --silver-500: 215 14% 44%;
+    --silver-600: 215 14% 34%;
+
+    /* ── the one accent: jade ── */
+    --accent: 160 84% 42%;
+    --accent-soft: 160 70% 55%;
+    --accent-muted: 160 40% 24%;
+    --accent-fg: 160 90% 8%;
+
+    /* ── risk semantics ── */
+    --risk-low: 152 62% 46%;
+    --risk-medium: 38 92% 55%;
+    --risk-high: 18 90% 58%;
+    --risk-critical: 352 82% 58%;
+
+    /* ── negotiation sides ── */
+    --org: 160 84% 45%;
+    --counterparty: 265 72% 64%;
+
+    /* ── shadcn-compatible aliases ── */
+    --background: var(--base-950);
+    --foreground: var(--silver-100);
+    --card: var(--base-800);
+    --card-foreground: var(--silver-100);
+    --popover: var(--base-850);
+    --popover-foreground: var(--silver-100);
+    --muted: var(--base-800);
+    --muted-foreground: var(--silver-400);
+    --border: 220 14% 18%;
+    --input: 220 14% 20%;
+    --ring: var(--accent);
+    --destructive: 352 82% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* ── radii ── */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 0.875rem;
+    --radius-xl: 1.125rem;
+    --radius-2xl: 1.5rem;
+
+    --font-sans: "Inter", system-ui;
+    --font-mono: "JetBrains Mono", ui-monospace;
+  }
+
+  .light {
+    --background: 210 40% 98%;
+    --foreground: 222 24% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 24% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 24% 10%;
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 42%;
+    --border: 214 25% 88%;
+    --input: 214 25% 86%;
+    --accent: 160 76% 34%;
+    --silver-100: 222 24% 12%;
+    --silver-200: 222 20% 22%;
+    --silver-300: 215 16% 38%;
+    --silver-400: 215 16% 46%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    text-rendering: optimizeLegibility;
+    /* Prevent the animated backgrounds from ever causing a horizontal scrollbar. */
+    overflow-x: hidden;
+  }
+
+  /* Respect users who ask for less motion: kill decorative animation entirely. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  ::selection {
+    background: hsl(var(--accent) / 0.28);
+    color: hsl(var(--silver-50));
+  }
+
+  /* Slim, unobtrusive scrollbars that match the surface. */
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--base-900));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--base-600));
+    border-radius: 9999px;
+    border: 2px solid hsl(var(--base-900));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--silver-600));
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--accent) / 0.7);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* ── glassmorphic card: the primary surface throughout the app ── */
+  .glass {
+    @apply relative rounded-xl border border-silver-50/[0.07] bg-base-800/55 shadow-glass backdrop-blur-xl;
+  }
+
+  /* A single hairline highlight along the top edge sells the "pane of glass"
+     effect far more cheaply than heavy borders or gradients. */
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding-top: 1px;
+    background: linear-gradient(
+      to bottom,
+      hsl(var(--silver-50) / 0.1),
+      transparent 40%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .glass-hover {
+    @apply transition-[transform,border-color,box-shadow] duration-300 ease-premium;
+  }
+  .glass-hover:hover {
+    @apply -translate-y-0.5 border-silver-50/[0.12] shadow-glass-lg;
+  }
+
+  .panel {
+    @apply rounded-lg border border-silver-50/[0.06] bg-base-900/60 backdrop-blur-md;
+  }
+
+  /* ── typography helpers ── */
+  .eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-[0.14em] text-silver-400;
+  }
+
+  .heading-gradient {
+    @apply bg-gradient-to-br from-silver-50 via-silver-100 to-silver-400 bg-clip-text text-transparent;
+  }
+
+  .numeric {
+    @apply font-mono tabular-nums tracking-tight;
+  }
+
+  /* ── loading skeleton with a travelling sheen ── */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-base-700/50;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full bg-shimmer animate-shimmer;
+  }
+
+  /* ── diff rendering for redlines ── */
+  .diff-del {
+    @apply rounded bg-risk-critical/[0.16] text-risk-critical line-through decoration-risk-critical/50;
+  }
+  .diff-ins {
+    @apply rounded bg-risk-low/[0.16] text-risk-low no-underline;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
