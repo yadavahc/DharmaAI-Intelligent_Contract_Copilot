@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 
 from app.agents import runtime_info
 from app.config import settings
+from app.observability import capture_exception, init_error_monitoring
 from app.routers import (
     audit as audit_router,
     clauses,
@@ -42,6 +43,9 @@ logger = logging.getLogger("dharma")
 async def lifespan(app: FastAPI):
     logger.info("─" * 68)
     logger.info("Dharma AI backend starting")
+
+    monitoring = init_error_monitoring()
+    logger.info("Error monitoring: %s", monitoring["sink"])
 
     runtime = runtime_info()
     logger.info(
@@ -116,8 +120,22 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Return a structured error instead of an opaque 500."""
+    """Return a structured error instead of an opaque 500, and report it."""
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+
+    # Routed to Sentry when a DSN is configured, otherwise to structured logs.
+    # Secrets are scrubbed either way; see app/observability.py.
+    capture_exception(
+        exc,
+        context={
+            "method": request.method,
+            "path": str(request.url.path),
+            "query": dict(request.query_params),
+            "actor": request.headers.get("X-Dharma-Actor"),
+            "role": request.headers.get("X-Dharma-Role"),
+        },
+    )
+
     return JSONResponse(
         status_code=500,
         content={

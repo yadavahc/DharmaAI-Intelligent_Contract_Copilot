@@ -1,0 +1,20 @@
+# ─────────────────────────────────────────────────────────────────────────
+# OPTIONAL — runtime error monitoring.
+#
+#   pip install -r requirements-observability.txt
+#
+# Dharma AI reports unhandled exceptions through app/observability.py. That
+# module works with or without this package:
+#
+#   * SENTRY_DSN set   + sentry-sdk installed → events go to Sentry
+#   * SENTRY_DSN unset (or sdk missing)       → structured JSON logs
+#
+# It is deliberately not in requirements.txt. Forcing a third-party SaaS
+# dependency on anyone who just wants to run the demo is the wrong default, and
+# the structured-log path is genuinely useful on its own — any aggregator
+# (Loki, CloudWatch, Datadog) can ingest it.
+#
+# Secrets are scrubbed from every event before it leaves the process regardless
+# of which sink is active; see tests/test_observability.py.
+# ─────────────────────────────────────────────────────────────────────────
+sentry-sdk[fastapi]==2.19.2

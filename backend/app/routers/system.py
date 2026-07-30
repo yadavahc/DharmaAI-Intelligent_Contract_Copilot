@@ -16,6 +16,7 @@ from app.agents.model import recorder
 from app.agents.pipeline import run_lyzr_linear_pipeline
 from app.config import settings
 from app.db import db_health
+from app.observability import status as monitoring_status
 from app.services import audit
 from app.services.qdrant_store import COLLECTION_PURPOSE, get_store
 
@@ -36,6 +37,7 @@ def health() -> Dict[str, Any]:
         "database": db_health(),
         "vector_store": store.health(),
         "lyzr": runtime_info(),
+        "error_monitoring": monitoring_status(),
         "thresholds": {
             "risk_high": settings.risk_high_threshold,
             "risk_medium": settings.risk_medium_threshold,
