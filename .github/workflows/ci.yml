@@ -274,6 +274,10 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Narrow allowlist for the synthetic secrets that the scrubber tests
+          # must contain in order to assert they get redacted. Scoped to that one
+          # file so a real leak elsewhere is still caught.
+          GITLEAKS_CONFIG: .gitleaks.toml
 
       - name: Assert no env files are tracked
         run: |

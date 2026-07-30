@@ -1,0 +1,28 @@
+# gitleaks configuration
+#
+# Extends the default ruleset — this file narrows it, it does not replace it.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fabricated fixtures used to prove the secret scrubber works"
+
+# backend/tests/test_observability.py asserts that secrets do NOT survive
+# scrub(). To do that it has to contain secret-shaped strings: a fake OpenAI key,
+# a fake JWT, and a connection URI with a fake password. They are the *inputs* to
+# the assertions, and every one is obviously synthetic (repeated characters or
+# "AbCdEf…" sequences) rather than a redacted real credential.
+#
+# Scoped to that single path on purpose: a blanket regex allowlist would also
+# hide a genuine leak elsewhere in the repo.
+paths = [
+    '''backend/tests/test_observability\.py''',
+]
+
+# Placeholder values shipped in .env.example so a fresh clone knows what to fill in.
+regexes = [
+    '''sk-replace-me''',
+    '''replace-with-32-byte-random-string''',
+    '''dharma-dev-secret-change-me-in-production''',
+    '''ci-only-secret-not-used-outside-this-job''',
+]
