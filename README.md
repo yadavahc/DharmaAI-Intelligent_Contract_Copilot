@@ -18,7 +18,8 @@ what a human actually needs to decide.
 ![Qdrant](https://img.shields.io/badge/Qdrant-5%20retrieval%20roles-DC244C?style=for-the-badge)
 ![Postgres](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql)
 
-![Tests](https://img.shields.io/badge/tests-111%20passing-brightgreen?style=flat-square)
+[![CI](https://github.com/yadavahc/DharmaAI-Intelligent_Contract_Copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/yadavahc/DharmaAI-Intelligent_Contract_Copilot/actions/workflows/ci.yml)
+![Tests](https://img.shields.io/badge/tests-120%20passing-brightgreen?style=flat-square)
 ![E2E](https://img.shields.io/badge/playwright-3%2F3%20passing-brightgreen?style=flat-square)
 ![Live](https://img.shields.io/badge/live%20run-85%20agent%20calls%2C%200%20errors-brightgreen?style=flat-square)
 ![Docker](https://img.shields.io/badge/docker--compose-4%20services%20healthy-blue?style=flat-square)
@@ -51,7 +52,9 @@ what a human actually needs to decide.
 | [Five signature features](#-five-signature-features) | What makes this more than a demo |
 | [Guardrails](#-guardrails) | Injection, PII, hallucination, approval gate |
 | [Tech stack](#-tech-stack) | Every dependency and why |
-| [Testing](#-testing) | 111 unit tests + e2e, and what was actually run |
+| [CI/CD](#-cicd) | What runs on every push |
+| [Testing](#-testing) | 120 unit tests + e2e, and what was actually run |
+| [Production hardening](#-production-hardening) | Secrets and error monitoring |
 | [Design decisions](#-design-decisions-worth-knowing) | The non-obvious engineering calls |
 | [Project layout](#-project-layout) | Where everything lives |
 | [Verify every claim](#-verify-every-claim-yourself) | curl commands that prove the README |
@@ -514,10 +517,104 @@ and monetary figures against the source clause.
 
 ---
 
+## 🔄 CI/CD
+
+Every push and pull request runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml) —
+five jobs in parallel:
+
+| Job | What it does |
+| --- | --- |
+| **Backend** | Installs deps, **asserts the genuine Lyzr SDK imports** (CI fails rather than silently green-lighting the fallback shim), runs 120 unit tests |
+| **Frontend** | `npm ci` → Prisma generate → typecheck → lint → production build |
+| **E2E** | Spins up **Postgres and Qdrant as service containers**, starts the backend, pushes the auth schema, builds, and runs the full Playwright journey. Uploads traces and screenshots on failure |
+| **Docker** | Builds both images with layer caching, then **runs the backend image** to confirm it ships the real SDK |
+| **Security** | `gitleaks` over full history, asserts no `.env` file is tracked, plus advisory `npm audit --omit=dev` and `pip-audit` |
+
+Everything runs with `DHARMA_DEMO_MODE=true`: no API key, no spend, no rate-limit
+flakes — while the agents still execute through genuine Lyzr `Task` objects, so the
+real orchestration is exercised.
+
+> [!NOTE]
+> The Lyzr assertion is the one worth highlighting. The whole multi-agent claim rests
+> on the genuine SDK being live, so CI verifies it explicitly in both the runner and
+> the built image rather than assuming a successful `pip install` means it works.
+
+---
+
+## 🔐 Production hardening
+
+### Secrets
+
+`.env` is right for local development. In production, a secret in an environment
+variable is visible to `docker inspect`, to every child process, and to any crash
+reporter that dumps the environment. So Dharma AI also reads the **`*_FILE`
+convention** used by Docker Swarm and Kubernetes:
+
+```
+Precedence (lowest → highest)
+  .env file  →  environment variable  →  <NAME>_FILE  →  /run/secrets/<name>
+```
+
+```yaml
+# docker-compose.yml
+secrets:
+  openai_api_key:
+    file: ./secrets/openai_api_key
+services:
+  backend:
+    secrets: [openai_api_key]
+    environment:
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+```
+
+Kubernetes needs no configuration at all — mount the Secret at `/run/secrets` and the
+key is picked up by name. Supported for `OPENAI_API_KEY`, `QDRANT_API_KEY` and
+`DATABASE_URL`.
+
+Startup also **audits** what it loaded: it warns if the OpenAI key is still the
+`.env.example` placeholder, if no key is set (so demo mode is about to engage), or if
+the default Postgres credentials are in use — at boot, rather than at first failing
+request.
+
+### Error monitoring
+
+Unhandled exceptions in the agent pipeline are the failures that matter most: they
+happen mid-review, often on one clause out of seventeen, and without reporting they
+surface as "the demo froze" with nothing to debug from.
+
+[`app/observability.py`](backend/app/observability.py) reports them, with **Sentry
+optional**:
+
+| `SENTRY_DSN` | Sink |
+| --- | --- |
+| set (+ `pip install -r backend/requirements-observability.txt`) | Sentry, with tracing |
+| unset | Structured JSON logs any aggregator can ingest |
+
+`sentry-sdk` is deliberately **not** in `requirements.txt` — forcing a third-party SaaS
+signup on anyone who just wants to run the demo is the wrong default, and the
+structured-log path is genuinely useful on its own.
+
+Three properties hold whichever sink is active:
+
+- **Secrets are scrubbed before an event leaves the process.** OpenAI keys, JWTs,
+  credentials inside connection URIs, and any key-like field name are redacted —
+  recursively, through nested payloads. An error reporter that ships an API key to a
+  third party is worse than no reporter at all, so this is covered by 9 dedicated tests.
+- **Reporting never raises.** A monitoring outage must not become an application outage.
+- **Agent context is attached** — which agent, which contract, which clause — because
+  "KeyError in contract_agents.py" is not actionable on its own.
+
+Contract text is confidential, so the Sentry integration sets `send_default_pii=False`
+and `max_request_body_size="never"`: request bodies are never attached automatically.
+
+`/api/health` reports the active sink, so it is never a guess.
+
+---
+
 ## 🧪 Testing
 
 ```bash
-# backend unit tests — 111 tests, no network, no spend
+# backend unit tests — 120 tests, no network, no spend
 cd backend && pytest
 
 # frontend typecheck + production build
@@ -558,7 +655,7 @@ audit chain, plus guardrail firing and role enforcement.
 
 | Check | Result |
 | --- | --- |
-| Backend unit tests | **111 passing** |
+| Backend unit tests | **120 passing** |
 | Frontend typecheck + production build | Clean, **15 routes** |
 | Playwright e2e (3 specs) | **3/3 passing** vs. real Postgres + Qdrant Cloud |
 | `docker compose up` (4 services) | All **healthy**; Prisma creates 4 auth tables, SQLAlchemy 8 `dharma_*` tables |
@@ -660,6 +757,7 @@ repair, the same query scores **64%**.
 
 ```
 DharmaAI-Intelligent_Contract_Copilot/
+├── .github/workflows/ci.yml     5 jobs: tests, build, e2e, images, secret scan
 ├── docker-compose.yml           4 services, healthchecks, container-internal wiring
 ├── .env.example                 every setting, documented
 ├── docs/
@@ -669,10 +767,12 @@ DharmaAI-Intelligent_Contract_Copilot/
 │   ├── Dockerfile               python:3.11-slim — satisfies Lyzr natively
 │   ├── requirements.txt
 │   ├── requirements-lyzr.txt    the --no-deps rationale, in full
+│   ├── requirements-observability.txt   optional Sentry
 │   ├── app/
 │   │   ├── main.py              app + fault-tolerant startup
 │   │   ├── config.py            settings; paths anchored on the package
 │   │   ├── domain.py            taxonomy, risk levels, category weights
+│   │   ├── observability.py     error monitoring + secret scrubbing
 │   │   ├── db.py                SQLAlchemy models (domain tables)
 │   │   ├── agents/              ★ ALL LYZR AGENT DEFINITIONS
 │   │   │   ├── lyzr_compat.py       runtime resolution + signature-identical shim
@@ -686,10 +786,11 @@ DharmaAI-Intelligent_Contract_Copilot/
 │   │   ├── services/            extract · clauses · embeddings · qdrant_store
 │   │   │                        guardrails · audit · ingest · seed
 │   │   └── routers/             9 routers
-│   └── tests/                   111 unit tests
+│   └── tests/                   120 unit tests
 └── frontend/
     ├── Dockerfile               multi-stage, standalone output
     ├── prisma/schema.prisma     auth tables only
+    ├── eslint.config.mjs        flat config (next lint is deprecated)
     ├── e2e/dharma.spec.ts       the end-to-end journey
     └── src/
         ├── app/                 15 routes
