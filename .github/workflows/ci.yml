@@ -133,7 +133,12 @@ jobs:
         # the readiness probe runs from the runner instead (see below).
 
     env:
-      DATABASE_URL: postgresql://dharma:dharma@localhost:5432/dharma
+      # One URL for both, mirroring .env.example. `?schema=auth` scopes Prisma to
+      # its own schema; the backend strips the query string and uses `public`.
+      # It must be job-level, not step-level: the Playwright webServer runs
+      # `npm run start`, and the Prisma *runtime client* needs the same scope as
+      # `db push`, or it pushes to `auth` and then reads from `public`.
+      DATABASE_URL: postgresql://dharma:dharma@localhost:5432/dharma?schema=auth
       QDRANT_URL: http://localhost:6333
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ci-only-secret-not-used-outside-this-job
@@ -192,11 +197,6 @@ jobs:
 
       - name: Prepare database and build
         working-directory: frontend
-        env:
-          # Prisma manages only the `auth` schema. Sharing `public` with the
-          # backend made db push try to drop the dharma_* tables it had just
-          # created and seeded.
-          DATABASE_URL: postgresql://dharma:dharma@localhost:5432/dharma?schema=auth
         run: |
           npx prisma db push --skip-generate
           npm run build

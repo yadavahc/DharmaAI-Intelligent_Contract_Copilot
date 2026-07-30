@@ -485,3 +485,42 @@ def test_fired_playbook_rule_sets_a_high_risk_floor(monkeypatch) -> None:
         [LIABILITY_CAP_RULE],
     )
     assert result["risk_score"] >= settings.risk_high_threshold
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Database URL handling (regression — schema ownership)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_sqlalchemy_url_strips_the_prisma_schema_parameter() -> None:
+    """The backend must ignore `?schema=auth` and stay on `public`.
+
+    Prisma and SQLAlchemy share one Postgres database but own different schemas.
+    The frontend's DATABASE_URL carries `?schema=auth` to confine `prisma db push`
+    to its own tables — without that scope it treats the backend's `dharma_*`
+    tables as drift and drops them:
+
+        "You are about to drop the `dharma_playbook_rules` table, which is not
+         empty (14 rows)."
+
+    Because the same base URL is shared by both services, the backend stripping
+    that query string is what makes one variable safe for both. If this ever
+    stopped stripping, the backend would silently start reading and writing the
+    auth schema instead.
+    """
+    from app.config import Settings
+
+    settings = Settings(
+        DATABASE_URL="postgresql://dharma:dharma@localhost:5432/dharma?schema=auth"
+    )
+    assert "schema=auth" not in settings.sqlalchemy_url
+    assert settings.sqlalchemy_url == (
+        "postgresql+psycopg://dharma:dharma@localhost:5432/dharma"
+    )
+
+
+def test_sqlalchemy_url_normalises_the_postgres_scheme() -> None:
+    from app.config import Settings
+
+    settings = Settings(DATABASE_URL="postgres://u:p@host:5432/db")
+    assert settings.sqlalchemy_url.startswith("postgresql+psycopg://")
